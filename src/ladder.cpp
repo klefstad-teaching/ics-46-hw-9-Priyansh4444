@@ -33,7 +33,40 @@ bool edit_distance_within(const std::string &str1, const std::string &str2, int 
 
 bool is_adjacent(const string &word1, const string &word2)
 {
-    return edit_distance_within(word1, word2, 1);
+    // Case 1: Same length - exactly one character different
+    if (word1.length() == word2.length())
+    {
+        return edit_distance_within(word1, word2, 1);
+    }
+    // Case 2: Length differs by 1 - insertion or deletion
+    if (abs((int)word1.length() - (int)word2.length()) == 1)
+    {
+        const string &shorter = (word1.length() < word2.length()) ? word1 : word2;
+        const string &longer = (word1.length() > word2.length()) ? word1 : word2;
+        // Check if longer string has one extra character
+        size_t i = 0, j = 0;
+        bool diff_found = false;
+
+        while (i < shorter.length() && j < longer.length())
+        {
+            if (shorter[i] != longer[j])
+            {
+                if (diff_found)
+                    return false; // More than one difference
+                diff_found = true;
+                j++; // Skip the extra character in longer string
+            }
+            else
+            {
+                i++;
+                j++;
+            }
+        }
+
+        return true;
+    }
+    // Length differs by more than 1
+    return false;
 }
 
 void load_words(set<string> &word_list, const string &file_name)
@@ -48,13 +81,13 @@ void load_words(set<string> &word_list, const string &file_name)
 
 vector<string> generate_word_ladder(const string &begin_word, const string &end_word, const set<string> &word_list)
 {
-    if (begin_word.length() != end_word.length())
+    if (begin_word.length() != end_word.length() &&
+        abs((int)begin_word.length() - (int)end_word.length()) > 1)
     {
-        error(begin_word, end_word, "same length");
+        error(begin_word, end_word, "similar length");
         return {};
     }
-
-    if (word_list.find(begin_word) == word_list.end() || word_list.find(end_word) == word_list.end())
+    if (word_list.find(end_word) == word_list.end())
     {
         error(begin_word, end_word, "valid dictionary");
         return {};
@@ -95,13 +128,12 @@ vector<string> generate_word_ladder(const string &begin_word, const string &end_
 void print_word_ladder(const vector<string> &ladder)
 {
     if (ladder.empty())
-        return;
-
+        std::cout << "No word ladder found." << std::endl;
+    return;
+    std::cout << "Word ladder found: ";
     for (size_t i = 0; i < ladder.size(); ++i)
     {
-        cout << ladder[i];
-        if (i < ladder.size() - 1)
-            cout << " -> ";
+        cout << ladder[i] << " ";
     }
     cout << endl;
 }

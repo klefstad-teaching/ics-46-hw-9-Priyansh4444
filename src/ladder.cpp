@@ -123,6 +123,10 @@ void load_words(set<string> &word_list, const string &file_name)
 
 vector<string> generate_word_ladder(const string &begin_word, const string &end_word, const set<string> &word_list)
 {
+        // If begin_word is already end_word, return trivial ladder
+        if (begin_word == end_word) {
+            return {begin_word};
+        }
     if (begin_word.length() != end_word.length() &&
         abs((int)begin_word.length() - (int)end_word.length()) > 1)
     {
@@ -171,7 +175,6 @@ void print_word_ladder(const vector<string> &ladder)
 {
     if (ladder.empty())
         std::cout << "No word ladder found." << std::endl;
-    return;
     std::cout << "Word ladder found: ";
     for (size_t i = 0; i < ladder.size(); ++i)
     {

@@ -126,7 +126,7 @@ vector<string> generate_word_ladder(const string &begin_word, const string &end_
     // If begin_word is already end_word, return trivial ladder
     if (begin_word == end_word)
     {
-        return {begin_word};
+        return {};
     }
     if (begin_word.length() != end_word.length() &&
         abs((int)begin_word.length() - (int)end_word.length()) > 1)

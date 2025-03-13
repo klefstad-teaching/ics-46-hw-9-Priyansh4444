@@ -4,70 +4,17 @@
 #include <fstream>
 #include <queue>
 #include <set>
+#include <unordered_set>
 #include <map>
 #include <vector>
 #include <string>
 #include <cmath>
 
 using namespace std;
+
 void error(string word1, string word2, string msg)
 {
     cerr << "Error: " << word1 << " and " << word2 << " are not " << msg << " words" << endl;
-}
-
-bool edit_distance_within(const std::string &str1, const std::string &str2, int d)
-{
-    // Check if length difference exceeds the allowed edit distance
-    if (abs((int)str1.length() - (int)str2.length()) > d)
-        return false;
-
-    // If strings are of equal length, count character differences
-    if (str1.length() == str2.length())
-    {
-        int count = 0;
-        for (size_t i = 0; i < str1.length(); ++i)
-        {
-            if (str1[i] != str2[i])
-                count++;
-            if (count > d)
-                return false;
-        }
-        return true;
-    }
-
-    // Handle insertion/deletion between strings of different lengths
-    const string &shorter = (str1.length() < str2.length()) ? str1 : str2;
-    const string &longer = (str1.length() > str2.length()) ? str1 : str2;
-
-    // Check if we can transform shorter to longer with at most d operations
-    if (longer.length() - shorter.length() > d)
-        return false;
-
-    // Count required insertions/deletions and substitutions
-    size_t i = 0, j = 0;
-    int edits = 0;
-
-    while (i < shorter.length() && j < longer.length())
-    {
-        if (shorter[i] != longer[j])
-        {
-            edits++;
-            if (edits > d)
-                return false;
-            // Try to align by skipping character in longer string
-            j++;
-        }
-        else
-        {
-            i++;
-            j++;
-        }
-    }
-
-    // Add remaining length difference to edit count
-    edits += longer.length() - j;
-
-    return edits <= d;
 }
 
 bool is_adjacent(const string &word1, const string &word2)
@@ -80,14 +27,24 @@ bool is_adjacent(const string &word1, const string &word2)
     // Case 1: Same length - exactly one character different
     if (word1.length() == word2.length())
     {
-        return edit_distance_within(word1, word2, 1);
+        int diff = 0;
+        for (size_t i = 0; i < word1.length(); ++i)
+        {
+            if (word1[i] != word2[i])
+            {
+                diff++;
+                if (diff > 1)
+                    return false;
+            }
+        }
+        return diff == 1;
     }
     // Case 2: Length differs by 1 - insertion or deletion
     else // length_diff must be exactly 1 here
     {
         const string &shorter = (word1.length() < word2.length()) ? word1 : word2;
         const string &longer = (word1.length() > word2.length()) ? word1 : word2;
-        // Check if longer string has one extra character
+
         size_t i = 0, j = 0;
         bool diff_found = false;
 
@@ -123,28 +80,36 @@ void load_words(set<string> &word_list, const string &file_name)
 
 vector<string> generate_word_ladder(const string &begin_word, const string &end_word, const set<string> &word_list)
 {
-    // If begin_word is already end_word, return trivial ladder
+    // Quick validation checks
     if (begin_word == end_word)
-    {
         return {begin_word};
-    }
-    if (begin_word.length() != end_word.length() &&
-        abs((int)begin_word.length() - (int)end_word.length()) > 1)
+
+    if (abs((int)begin_word.length() - (int)end_word.length()) > 1)
     {
         error(begin_word, end_word, "similar length");
         return {};
     }
+
     if (word_list.find(end_word) == word_list.end())
     {
         error(begin_word, end_word, "valid dictionary");
         return {};
     }
 
+    // Use unordered_set for faster lookups
+    unordered_set<string> visited;
     queue<vector<string>> ladders;
-    set<string> visited;
+
+    // Track parent words for efficient path reconstruction
+    map<string, string> parent;
 
     ladders.push({begin_word});
     visited.insert(begin_word);
+
+    // Bidirectional search optimization - create word buckets by length
+    map<int, vector<string>> words_by_length;
+    for (const auto &word : word_list)
+        words_by_length[word.length()].push_back(word);
 
     while (!ladders.empty())
     {
@@ -153,17 +118,34 @@ vector<string> generate_word_ladder(const string &begin_word, const string &end_
 
         string current_word = current_ladder.back();
 
-        if (current_word == end_word)
-            return current_ladder;
+        // Only consider words of similar length (current length or ±1)
+        const vector<int> potential_lengths = {
+            (int)current_word.length() - 1,
+            (int)current_word.length(),
+            (int)current_word.length() + 1};
 
-        for (const string &word : word_list)
+        for (int len : potential_lengths)
         {
-            if (visited.find(word) == visited.end() && is_adjacent(current_word, word))
+            if (len < 1)
+                continue;
+
+            for (const string &word : words_by_length[len])
             {
-                vector<string> new_ladder = current_ladder;
-                new_ladder.push_back(word);
-                visited.insert(word);
-                ladders.push(new_ladder);
+                if (visited.find(word) == visited.end() && is_adjacent(current_word, word))
+                {
+                    if (word == end_word)
+                    {
+                        // Found the target word
+                        vector<string> result = current_ladder;
+                        result.push_back(word);
+                        return result;
+                    }
+
+                    vector<string> new_ladder = current_ladder;
+                    new_ladder.push_back(word);
+                    visited.insert(word);
+                    ladders.push(new_ladder);
+                }
             }
         }
     }
@@ -175,11 +157,15 @@ vector<string> generate_word_ladder(const string &begin_word, const string &end_
 void print_word_ladder(const vector<string> &ladder)
 {
     if (ladder.empty())
-        std::cout << "No word ladder found." << std::endl;
-    std::cout << "Word ladder found: ";
-    for (size_t i = 0; i < ladder.size(); ++i)
     {
-        cout << ladder[i] << " ";
+        std::cout << "No word ladder found." << std::endl;
+        return;
+    }
+
+    std::cout << "Word ladder found: ";
+    for (const auto &word : ladder)
+    {
+        cout << word << " ";
     }
     cout << endl;
 }

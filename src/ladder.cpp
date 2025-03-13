@@ -17,18 +17,57 @@ void error(string word1, string word2, string msg)
 
 bool edit_distance_within(const std::string &str1, const std::string &str2, int d)
 {
-    if (str1.length() != str2.length())
+    // Check if length difference exceeds the allowed edit distance
+    if (abs((int)str1.length() - (int)str2.length()) > d)
         return false;
 
-    int count = 0;
-    for (size_t i = 0; i < str1.length(); ++i)
+    // If strings are of equal length, count character differences
+    if (str1.length() == str2.length())
     {
-        if (str1[i] != str2[i])
-            count++;
-        if (count > d)
-            return false;
+        int count = 0;
+        for (size_t i = 0; i < str1.length(); ++i)
+        {
+            if (str1[i] != str2[i])
+                count++;
+            if (count > d)
+                return false;
+        }
+        return true;
     }
-    return true;
+
+    // Handle insertion/deletion between strings of different lengths
+    const string &shorter = (str1.length() < str2.length()) ? str1 : str2;
+    const string &longer = (str1.length() > str2.length()) ? str1 : str2;
+
+    // Check if we can transform shorter to longer with at most d operations
+    if (longer.length() - shorter.length() > d)
+        return false;
+
+    // Count required insertions/deletions and substitutions
+    size_t i = 0, j = 0;
+    int edits = 0;
+
+    while (i < shorter.length() && j < longer.length())
+    {
+        if (shorter[i] != longer[j])
+        {
+            edits++;
+            if (edits > d)
+                return false;
+            // Try to align by skipping character in longer string
+            j++;
+        }
+        else
+        {
+            i++;
+            j++;
+        }
+    }
+
+    // Add remaining length difference to edit count
+    edits += longer.length() - j;
+
+    return edits <= d;
 }
 
 bool is_adjacent(const string &word1, const string &word2)

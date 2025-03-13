@@ -33,13 +33,18 @@ bool edit_distance_within(const std::string &str1, const std::string &str2, int 
 
 bool is_adjacent(const string &word1, const string &word2)
 {
+    // Early exit: check if string lengths differ by more than 1
+    int length_diff = abs((int)word1.length() - (int)word2.length());
+    if (length_diff > 1)
+        return false;
+        
     // Case 1: Same length - exactly one character different
     if (word1.length() == word2.length())
     {
         return edit_distance_within(word1, word2, 1);
     }
     // Case 2: Length differs by 1 - insertion or deletion
-    if (abs((int)word1.length() - (int)word2.length()) == 1)
+    else // length_diff must be exactly 1 here
     {
         const string &shorter = (word1.length() < word2.length()) ? word1 : word2;
         const string &longer = (word1.length() > word2.length()) ? word1 : word2;
@@ -65,8 +70,6 @@ bool is_adjacent(const string &word1, const string &word2)
 
         return true;
     }
-    // Length differs by more than 1
-    return false;
 }
 
 void load_words(set<string> &word_list, const string &file_name)

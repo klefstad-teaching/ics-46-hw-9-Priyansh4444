@@ -189,16 +189,5 @@ void print_word_ladder(const vector<string> &ladder)
 
 void verify_word_ladder()
 {
-    set<string> word_list;
-    load_words(word_list, "words.txt");
-
-    string begin_word, end_word;
-    cout << "Enter the beginning word: ";
-    cin >> begin_word;
-
-    cout << "Enter the ending word: ";
-    cin >> end_word;
-
-    vector<string> ladder = generate_word_ladder(begin_word, end_word, word_list);
-    print_word_ladder(ladder);
+    return;
 }

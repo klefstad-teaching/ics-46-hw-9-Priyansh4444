@@ -76,7 +76,7 @@ bool is_adjacent(const string &word1, const string &word2)
     int length_diff = abs((int)word1.length() - (int)word2.length());
     if (length_diff > 1)
         return false;
-        
+
     // Case 1: Same length - exactly one character different
     if (word1.length() == word2.length())
     {

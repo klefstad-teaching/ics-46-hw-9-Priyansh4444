@@ -146,7 +146,7 @@ vector<string> generate_word_ladder(const string &begin_word, const string &end_
     // Quick validations
     if (begin_word == end_word)
     {
-        return {begin_word};
+        return {};
     }
 
     if (word_list.find(end_word) == word_list.end())

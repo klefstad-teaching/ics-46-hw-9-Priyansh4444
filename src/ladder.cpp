@@ -141,29 +141,34 @@ void load_words(set<string> &word_list, const string &file_name)
         word_list.insert(word);
     }
 }
-vector<string> generate_word_ladder(const string& begin_word, const string& end_word, const set<string>& word_list) {
+vector<string> generate_word_ladder(const string &begin_word, const string &end_word, const set<string> &word_list)
+{
     queue<vector<string>> ladder_queue;
     vector<string> initial;
     initial.push_back(begin_word);
     ladder_queue.push(initial);
-    
+
     // Use a visited set to ensure we do not process the same word twice.
     set<string> visited;
     visited.insert(begin_word);
-    
-    while (!ladder_queue.empty()) {
+
+    while (!ladder_queue.empty())
+    {
         vector<string> ladder = ladder_queue.front();
         ladder_queue.pop();
         string last_word = ladder.back();
-        
+
         // Iterate over every word in the dictionary.
-        for (const string& word : word_list) {
-            if (visited.find(word) == visited.end() && is_adjacent(last_word, word)) {
+        for (const string &word : word_list)
+        {
+            if (visited.find(word) == visited.end() && is_adjacent(last_word, word))
+            {
                 vector<string> new_ladder = ladder;
                 new_ladder.push_back(word);
                 visited.insert(word);
-                if (word == end_word) {
-                    return new_ladder;  // Found a valid ladder!
+                if (word == end_word)
+                {
+                    return new_ladder; // Found a valid ladder!
                 }
                 ladder_queue.push(new_ladder);
             }

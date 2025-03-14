@@ -70,47 +70,58 @@ bool edit_distance_within(const std::string &str1, const std::string &str2, int 
     return edits <= d;
 }
 
-bool is_adjacent(const string &word1, const string &word2) {
+bool is_adjacent(const string &word1, const string &word2)
+{
     // Words differ by more than one character in length
-    if (abs((int)word1.length() - (int)word2.length()) > 1) {
+    if (abs((int)word1.length() - (int)word2.length()) > 1)
+    {
         return false;
     }
-    
+
     // Same length - check for one character difference
-    if (word1.length() == word2.length()) {
+    if (word1.length() == word2.length())
+    {
         int diffs = 0;
-        for (size_t i = 0; i < word1.length(); i++) {
-            if (word1[i] != word2[i]) {
+        for (size_t i = 0; i < word1.length(); i++)
+        {
+            if (word1[i] != word2[i])
+            {
                 diffs++;
             }
-            if (diffs > 1) {
+            if (diffs > 1)
+            {
                 return false;
             }
         }
         return diffs == 1; // Must have exactly one difference
     }
-    
+
     // Different length - check if one word can be derived from the other
     // by adding/removing one character
     const string &shorter = (word1.length() < word2.length()) ? word1 : word2;
     const string &longer = (word1.length() > word2.length()) ? word1 : word2;
-    
+
     size_t i = 0, j = 0;
     bool found_diff = false;
-    
-    while (i < shorter.length() && j < longer.length()) {
-        if (shorter[i] != longer[j]) {
-            if (found_diff) {
+
+    while (i < shorter.length() && j < longer.length())
+    {
+        if (shorter[i] != longer[j])
+        {
+            if (found_diff)
+            {
                 return false; // More than one difference
             }
             found_diff = true;
             j++; // Skip the character in longer word
-        } else {
+        }
+        else
+        {
             i++;
             j++;
         }
     }
-    
+
     // If we've gone through all characters in the shorter word
     // and we're at the last character of the longer word, they're adjacent
     return (i == shorter.length() && (j == longer.length() || j == longer.length() - 1)) ||
@@ -127,67 +138,124 @@ void load_words(set<string> &word_list, const string &file_name)
     }
 }
 
-vector<string> generate_word_ladder(const string &begin_word, const string &end_word, const set<string> &word_list)
-{
-    // If begin_word is already end_word, return trivial ladder
-    if (begin_word == end_word)
-    {
-        return {begin_word};
-    }
-
-    // Check if words are of similar length
-    if (begin_word.length() != end_word.length() &&
-        abs((int)begin_word.length() - (int)end_word.length()) > 1)
-    {
+vector<string> generate_word_ladder(const string &begin_word, const string &end_word, const set<string> &word_list) {
+    // Quick validations
+    if (begin_word == end_word) return {};
+    
+    if (abs((int)begin_word.length() - (int)end_word.length()) > 1) {
         error(begin_word, end_word, "similar length");
         return {};
     }
-
-    // Check if end_word is in dictionary
-    if (word_list.find(end_word) == word_list.end())
-    {
+    
+    if (word_list.find(end_word) == word_list.end()) {
         error(begin_word, end_word, "valid dictionary");
         return {};
     }
 
-    queue<vector<string>> ladders;
-    set<string> visited;
-
-    ladders.push({begin_word});
-    visited.insert(begin_word);
-
-    while (!ladders.empty())
-    {
-        vector<string> current_ladder = ladders.front();
-        ladders.pop();
-
-        string current_word = current_ladder.back();
-
-        // Check if we've reached the end word
-        if (current_word == end_word)
-        {
-            return current_ladder;
+    // BFS implementation
+    queue<string> q;
+    map<string, string> prev;  // Maps each word to its predecessor in the ladder
+    
+    q.push(begin_word);
+    prev[begin_word] = "";  // Mark the starting point
+    
+    bool found = false;
+    
+    while (!q.empty() && !found) {
+        string current = q.front();
+        q.pop();
+        
+        // Check all possible neighbors by modifying one character at a time
+        // For same length words - try changing each character
+        if (current.length() == end_word.length()) {
+            string temp = current;
+            for (size_t i = 0; i < current.length(); i++) {
+                char original = temp[i];
+                for (char c = 'a'; c <= 'z'; c++) {
+                    if (c == original) continue;
+                    temp[i] = c;
+                    
+                    if (temp == end_word) {
+                        prev[end_word] = current;
+                        found = true;
+                        break;
+                    }
+                    
+                    if (word_list.find(temp) != word_list.end() && prev.find(temp) == prev.end()) {
+                        q.push(temp);
+                        prev[temp] = current;
+                    }
+                }
+                temp[i] = original;
+                if (found) break;
+            }
         }
-
-        // Try all words in the dictionary
-        for (const string &word : word_list)
-        {
-            // Only process words we haven't visited yet
-            if (visited.find(word) == visited.end() && is_adjacent(current_word, word))
-            {
-                visited.insert(word); // Mark as visited immediately
-                vector<string> new_ladder = current_ladder;
-                new_ladder.push_back(word);
-                ladders.push(new_ladder);
+        
+        // For words that differ by one character in length
+        // Try inserting a character
+        if (!found && current.length() + 1 == end_word.length()) {
+            string temp = current;
+            for (size_t i = 0; i <= current.length(); i++) {
+                temp.insert(i, 1, ' ');  // Insert a placeholder
+                for (char c = 'a'; c <= 'z'; c++) {
+                    temp[i] = c;
+                    
+                    if (temp == end_word) {
+                        prev[end_word] = current;
+                        found = true;
+                        break;
+                    }
+                    
+                    if (word_list.find(temp) != word_list.end() && prev.find(temp) == prev.end()) {
+                        q.push(temp);
+                        prev[temp] = current;
+                    }
+                }
+                temp.erase(i, 1);  // Remove the inserted character
+                if (found) break;
+            }
+        }
+        
+        // Try deleting a character
+        if (!found && current.length() == end_word.length() + 1) {
+            string temp = current;
+            for (size_t i = 0; i < current.length(); i++) {
+                char deleted = temp[i];
+                temp.erase(i, 1);
+                
+                if (temp == end_word) {
+                    prev[end_word] = current;
+                    found = true;
+                    break;
+                }
+                
+                if (word_list.find(temp) != word_list.end() && prev.find(temp) == prev.end()) {
+                    q.push(temp);
+                    prev[temp] = current;
+                }
+                
+                temp.insert(i, 1, deleted);  // Restore the deleted character
+                if (found) break;
             }
         }
     }
-
-    // If we get here, no ladder was found
-    error(begin_word, end_word, "connected");
-    return {};
+    
+    if (!found) {
+        error(begin_word, end_word, "connected");
+        return {};
+    }
+    
+    // Reconstruct the ladder
+    vector<string> ladder;
+    string current = end_word;
+    while (current != "") {
+        ladder.push_back(current);
+        current = prev[current];
+    }
+    reverse(ladder.begin(), ladder.end());
+    
+    return ladder;
 }
-
 void print_word_ladder(const vector<string> &ladder)
 {
     if (ladder.empty())

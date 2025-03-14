@@ -132,7 +132,7 @@ vector<string> generate_neighbors(const string &word, const set<string> &word_li
                 neighbors.push_back(candidate);
         }
     }
-
+    std::sort(neighbors.begin(), neighbors.end());
     return neighbors;
 }
 
@@ -153,8 +153,6 @@ vector<string> generate_word_ladder(const string &begin_word, const string &end_
     ladder_queue.push(initial);
     if (begin_word == end_word)
         return {};
-    if (word_list.find(end_word) == word_list.end())
-        return initial;
     set<string> visited;
     visited.insert(begin_word);
 

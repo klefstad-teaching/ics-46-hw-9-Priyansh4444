@@ -141,125 +141,136 @@ void load_words(set<string> &word_list, const string &file_name)
         word_list.insert(word);
     }
 }
-
-vector<string> generate_word_ladder(const string &begin_word, const string &end_word, const set<string> &word_list) {
+vector<string> generate_word_ladder(const string &begin_word, const string &end_word, const set<string> &word_list)
+{
     // Quick validations
-    if (begin_word == end_word) return {};
-    
-    if (abs((int)begin_word.length() - (int)end_word.length()) > 1) {
-        error(begin_word, end_word, "similar length");
-        return {};
+    if (begin_word == end_word)
+    {
+        return {begin_word};
     }
-    
-    if (word_list.find(end_word) == word_list.end()) {
+
+    if (word_list.find(end_word) == word_list.end())
+    {
         error(begin_word, end_word, "valid dictionary");
         return {};
     }
 
-    // BFS implementation
-    queue<string> q;
-    map<string, string> prev;  // Maps each word to its predecessor in the ladder
-    
-    q.push(begin_word);
-    prev[begin_word] = "";  // Mark the starting point
-    
-    bool found = false;
-    
-    while (!q.empty() && !found) {
-        string current = q.front();
-        q.pop();
-        
-        // Check all possible neighbors by modifying one character at a time
-        // For same length words - try changing each character
-        if (current.length() == end_word.length()) {
-            string temp = current;
-            for (size_t i = 0; i < current.length(); i++) {
-                char original = temp[i];
-                for (char c = 'a'; c <= 'z'; c++) {
-                    if (c == original) continue;
-                    temp[i] = c;
-                    
-                    if (temp == end_word) {
-                        prev[end_word] = current;
-                        found = true;
-                        break;
-                    }
-                    
-                    if (word_list.find(temp) != word_list.end() && prev.find(temp) == prev.end()) {
-                        q.push(temp);
-                        prev[temp] = current;
-                    }
-                }
-                temp[i] = original;
-                if (found) break;
-            }
-        }
-        
-        // For words that differ by one character in length
-        // Try inserting a character
-        if (!found && current.length() + 1 == end_word.length()) {
-            string temp = current;
-            for (size_t i = 0; i <= current.length(); i++) {
-                temp.insert(i, 1, ' ');  // Insert a placeholder
-                for (char c = 'a'; c <= 'z'; c++) {
-                    temp[i] = c;
-                    
-                    if (temp == end_word) {
-                        prev[end_word] = current;
-                        found = true;
-                        break;
-                    }
-                    
-                    if (word_list.find(temp) != word_list.end() && prev.find(temp) == prev.end()) {
-                        q.push(temp);
-                        prev[temp] = current;
-                    }
-                }
-                temp.erase(i, 1);  // Remove the inserted character
-                if (found) break;
-            }
-        }
-        
-        // Try deleting a character
-        if (!found && current.length() == end_word.length() + 1) {
-            string temp = current;
-            for (size_t i = 0; i < current.length(); i++) {
-                char deleted = temp[i];
-                temp.erase(i, 1);
-                
-                if (temp == end_word) {
-                    prev[end_word] = current;
-                    found = true;
-                    break;
-                }
-                
-                if (word_list.find(temp) != word_list.end() && prev.find(temp) == prev.end()) {
-                    q.push(temp);
-                    prev[temp] = current;
-                }
-                
-                temp.insert(i, 1, deleted);  // Restore the deleted character
-                if (found) break;
-            }
-        }
+    if (begin_word.length() != end_word.length())
+    {
+        error(begin_word, end_word, "same length");
+        return {};
     }
-    
-    if (!found) {
+
+    // Using bidirectional BFS to improve efficiency (From the neetcode link professor showed us!!!)
+    set<string> word_set(word_list.begin(), word_list.end());
+
+    // Parent maps for reconstructing the path
+    unordered_map<string, string> parent_begin;
+    unordered_map<string, string> parent_end;
+
+    // Queues for BFS from both directions
+    queue<string> queue_begin;
+    queue<string> queue_end;
+
+    queue_begin.push(begin_word);
+    queue_end.push(end_word);
+
+    parent_begin[begin_word] = "";
+    parent_end[end_word] = "";
+
+    string meeting_point = "";
+    bool break_loop = false;
+    while (!queue_begin.empty() && !queue_end.empty())
+    {
+        // Process the smaller queue first for efficiency
+        if (queue_begin.size() > queue_end.size())
+        {
+            swap(queue_begin, queue_end);
+            swap(parent_begin, parent_end);
+        }
+
+        int size = queue_begin.size();
+        for (int i = 0; i < size; i++)
+        {
+            string current = queue_begin.front();
+            queue_begin.pop();
+
+            // Try changing each character
+            string temp = current;
+            for (int j = 0; j < current.length(); j++)
+            {
+                char original = temp[j];
+
+                // Try all possible characters
+                for (char c = 'a'; c <= 'z'; c++)
+                {
+                    if (c == original)
+                        continue;
+
+                    temp[j] = c;
+
+                    // Check if we've found a meeting point
+                    if (parent_end.find(temp) != parent_end.end())
+                    {
+                        meeting_point = temp;
+                        parent_begin[meeting_point] = current;
+                        break_loop = true;
+                    }
+
+                    // If this is a valid word and we haven't visited it yet
+                    if (word_set.find(temp) != word_set.end() &&
+                        parent_begin.find(temp) == parent_begin.end())
+                    {
+                        parent_begin[temp] = current;
+                        queue_begin.push(temp);
+                    }
+                    if (break_loop)
+                        break;
+                }
+                if (break_loop)
+                    break;
+                temp[j] = original; // Restore the original character
+            }
+        }
+        if (break_loop)
+            break;
+    }
+
+    if (meeting_point.empty())
+    {
         error(begin_word, end_word, "connected");
         return {};
     }
-    
-    // Reconstruct the ladder
-    vector<string> ladder;
-    string current = end_word;
-    while (current != "") {
-        ladder.push_back(current);
-        current = prev[current];
+
+    vector<string> path_begin;
+    string current = meeting_point;
+
+    // Build path from begin_word to meeting_point
+    while (!current.empty())
+    {
+        path_begin.push_back(current);
+        current = parent_begin[current];
     }
-    reverse(ladder.begin(), ladder.end());
-    
-    return ladder;
+
+    // Reverse to get the correct order
+    reverse(path_begin.begin(), path_begin.end());
+
+    // Build path from meeting_point to end_word
+    vector<string> path_end;
+    current = parent_end[meeting_point];
+
+    while (!current.empty())
+    {
+        path_end.push_back(current);
+        current = parent_end[current];
+    }
+
+    vector<string> complete_path = path_begin;
+    complete_path.insert(complete_path.end(), path_end.begin(), path_end.end());
+
+    return complete_path;
 }
+
 void print_word_ladder(const vector<string> &ladder)
 {
     if (ladder.empty())

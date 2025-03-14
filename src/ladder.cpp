@@ -70,45 +70,51 @@ bool edit_distance_within(const std::string &str1, const std::string &str2, int 
     return edits <= d;
 }
 
-bool is_adjacent(const string &word1, const string &word2)
-{
-    // Early exit: check if string lengths differ by more than 1
-    int length_diff = abs((int)word1.length() - (int)word2.length());
-    if (length_diff > 1)
+bool is_adjacent(const string &word1, const string &word2) {
+    // Words differ by more than one character in length
+    if (abs((int)word1.length() - (int)word2.length()) > 1) {
         return false;
-
-    // Case 1: Same length - exactly one character different
-    if (word1.length() == word2.length())
-    {
-        return edit_distance_within(word1, word2, 1);
     }
-    // Case 2: Length differs by 1 - insertion or deletion
-    else // length_diff must be exactly 1 here
-    {
-        const string &shorter = (word1.length() < word2.length()) ? word1 : word2;
-        const string &longer = (word1.length() > word2.length()) ? word1 : word2;
-        // Check if longer string has one extra character
-        size_t i = 0, j = 0;
-        bool diff_found = false;
-
-        while (i < shorter.length() && j < longer.length())
-        {
-            if (shorter[i] != longer[j])
-            {
-                if (diff_found)
-                    return false; // More than one difference
-                diff_found = true;
-                j++; // Skip the extra character in longer string
+    
+    // Same length - check for one character difference
+    if (word1.length() == word2.length()) {
+        int diffs = 0;
+        for (size_t i = 0; i < word1.length(); i++) {
+            if (word1[i] != word2[i]) {
+                diffs++;
             }
-            else
-            {
-                i++;
-                j++;
+            if (diffs > 1) {
+                return false;
             }
         }
-
-        return true;
+        return diffs == 1; // Must have exactly one difference
     }
+    
+    // Different length - check if one word can be derived from the other
+    // by adding/removing one character
+    const string &shorter = (word1.length() < word2.length()) ? word1 : word2;
+    const string &longer = (word1.length() > word2.length()) ? word1 : word2;
+    
+    size_t i = 0, j = 0;
+    bool found_diff = false;
+    
+    while (i < shorter.length() && j < longer.length()) {
+        if (shorter[i] != longer[j]) {
+            if (found_diff) {
+                return false; // More than one difference
+            }
+            found_diff = true;
+            j++; // Skip the character in longer word
+        } else {
+            i++;
+            j++;
+        }
+    }
+    
+    // If we've gone through all characters in the shorter word
+    // and we're at the last character of the longer word, they're adjacent
+    return (i == shorter.length() && (j == longer.length() || j == longer.length() - 1)) ||
+           (found_diff && i == shorter.length() && j == longer.length());
 }
 
 void load_words(set<string> &word_list, const string &file_name)
@@ -126,14 +132,18 @@ vector<string> generate_word_ladder(const string &begin_word, const string &end_
     // If begin_word is already end_word, return trivial ladder
     if (begin_word == end_word)
     {
-        return {};
+        return {begin_word};
     }
+
+    // Check if words are of similar length
     if (begin_word.length() != end_word.length() &&
         abs((int)begin_word.length() - (int)end_word.length()) > 1)
     {
         error(begin_word, end_word, "similar length");
         return {};
     }
+
+    // Check if end_word is in dictionary
     if (word_list.find(end_word) == word_list.end())
     {
         error(begin_word, end_word, "valid dictionary");
@@ -153,21 +163,27 @@ vector<string> generate_word_ladder(const string &begin_word, const string &end_
 
         string current_word = current_ladder.back();
 
+        // Check if we've reached the end word
         if (current_word == end_word)
+        {
             return current_ladder;
+        }
 
+        // Try all words in the dictionary
         for (const string &word : word_list)
         {
+            // Only process words we haven't visited yet
             if (visited.find(word) == visited.end() && is_adjacent(current_word, word))
             {
+                visited.insert(word); // Mark as visited immediately
                 vector<string> new_ladder = current_ladder;
                 new_ladder.push_back(word);
-                visited.insert(word);
                 ladders.push(new_ladder);
             }
         }
     }
 
+    // If we get here, no ladder was found
     error(begin_word, end_word, "connected");
     return {};
 }
